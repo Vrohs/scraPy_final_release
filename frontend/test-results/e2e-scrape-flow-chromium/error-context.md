@@ -1,0 +1,47 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - link "scraPy" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e5]: scraPy
+  - main [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e9]:
+        - heading "Extract data from any website" [level=1] [ref=e10]
+        - paragraph [ref=e11]: Turn websites into structured data with our intelligent scraping platform. Use guided selectors or let AI do the work for you.
+        - generic [ref=e12]:
+          - link "Start Scraping" [ref=e13] [cursor=pointer]:
+            - /url: /scrape
+            - button "Start Scraping" [ref=e14]:
+              - text: Start Scraping
+              - img
+          - link "View History" [ref=e15] [cursor=pointer]:
+            - /url: /history
+            - button "View History" [ref=e16]
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - generic [ref=e20]: Total Jobs
+            - img [ref=e21]
+          - generic [ref=e23]:
+            - generic [ref=e24]: "128"
+            - paragraph [ref=e25]: +14% from last month
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - generic [ref=e28]: Pages Scraped
+            - img [ref=e29]
+          - generic [ref=e31]:
+            - generic [ref=e32]: 14,293
+            - paragraph [ref=e33]: +20.1% from last month
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - generic [ref=e36]: Success Rate
+            - img [ref=e37]
+          - generic [ref=e41]:
+            - generic [ref=e42]: 98.2%
+            - paragraph [ref=e43]: +1.2% from last month
+  - region "Notifications alt+T"
+  - alert [ref=e44]
+```

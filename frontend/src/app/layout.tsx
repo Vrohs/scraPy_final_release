@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ScrapeFlow - Modern Web Scraping",
+  title: "scraPy - Modern Web Scraping",
   description: "Extract structured data from any website with intelligent routing.",
 };
 

@@ -9,7 +9,7 @@ export default function Navbar() {
         <nav className="border-b bg-background">
             <div className="container mx-auto flex h-16 items-center justify-between px-4">
                 <Link href="/" className="flex items-center space-x-2">
-                    <span className="text-xl font-bold">ScrapeFlow</span>
+                    <span className="text-xl font-bold">scraPy</span>
                 </Link>
 
                 <div className="flex items-center space-x-4">
