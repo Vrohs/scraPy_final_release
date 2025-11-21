@@ -127,7 +127,7 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_c3F1YXJlLW1vbGx5LTcyLmNsZXJrLmFjY291bn
 CLERK_SECRET_KEY=sk_test_E707AcKflh7XO9n3FPQVbhDhue9Umbp9lLEEjrnG2P
 
 # Backend API URL (use your Railway URL from Part 1, Step 6)
-NEXT_PUBLIC_API_URL=https://your-app.railway.app/api/v1
+NEXT_PUBLIC_API_URL=https://scrapyfinalrelease-production.up.railway.app/
 ```
 
 > [!IMPORTANT]
