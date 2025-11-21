@@ -2,11 +2,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 
-# Create async engine
-DATABASE_URL = settings.DATABASE_URL
-
+# Create async engine using the smart property that handles both local and production
 engine = create_async_engine(
-    DATABASE_URL,
+    settings.async_database_url,
     echo=True,
     future=True,
 )

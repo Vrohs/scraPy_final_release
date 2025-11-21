@@ -22,10 +22,17 @@ async def startup_event():
 async def shutdown_event():
     await app.state.redis.close()
 
-# Set all CORS enabled origins
+# Set all CORS enabled origins - supports both local dev and production
+# In production, set FRONTEND_URL to your Vercel domain
+allowed_origins = [settings.FRONTEND_URL]
+
+# Also allow Vercel preview deployments (optional, for testing)
+if settings.FRONTEND_URL != "http://localhost:3000":
+    allowed_origins.append("http://localhost:3000")  # Still allow local dev
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,7 +40,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"message": "Welcome to ScrapeFlow API"}
+    return {"message": "Welcome to scraPy API"}
 
 from app.api.v1.api import api_router
 
