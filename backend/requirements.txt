@@ -1,0 +1,14 @@
+fastapi==0.115.6
+uvicorn==0.34.0
+sqlalchemy==2.0.36
+asyncpg==0.30.0
+requests
+pyjwt
+cryptography
+arq==0.26.1
+httpx==0.28.1
+playwright==1.49.1
+beautifulsoup4==4.12.3
+pydantic-settings==2.7.0
+google-generativeai==0.8.3
+python-multipart==0.0.20
