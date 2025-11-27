@@ -10,7 +10,7 @@ async def analyze_page(html_content: str, instruction: str) -> Dict[str, Any]:
     if not settings.GEMINI_API_KEY:
         return {"error": "Gemini API key not configured"}
 
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.0-flash')
     
     # Truncate HTML to fit context window if necessary (simple approach)
     truncated_html = html_content[:30000] 

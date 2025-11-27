@@ -37,7 +37,8 @@ export default function ResultsView({ data, status, jobId, onSave }: ResultsView
     if (status === 'failed') {
         return (
             <div className="flex flex-col items-center justify-center h-64 space-y-4 text-destructive">
-                <p>Scraping failed. Please try again.</p>
+                <p className="font-semibold">Scraping failed</p>
+                <p className="text-sm text-muted-foreground">{(data as any)?.error || "Unknown error occurred"}</p>
             </div>
         );
     }

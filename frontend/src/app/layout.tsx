@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 
 import Providers from "@/components/providers";
 import Navbar from "@/components/shared/navbar";
+import GlobalErrorBoundary from "@/components/error-boundary";
 
 import { ClerkProvider } from '@clerk/nextjs';
 
@@ -34,10 +35,12 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
           <Providers>
-            <Navbar />
-            <main className="container mx-auto px-4 py-6">
-              {children}
-            </main>
+            <GlobalErrorBoundary>
+              <Navbar />
+              <main className="container mx-auto px-4 py-6">
+                {children}
+              </main>
+            </GlobalErrorBoundary>
           </Providers>
         </body>
       </html>

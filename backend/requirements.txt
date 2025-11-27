@@ -3,7 +3,7 @@ uvicorn==0.34.0
 sqlalchemy==2.0.36
 asyncpg==0.30.0
 requests
-pyjwt
+pyjwt[crypto]
 cryptography
 arq==0.26.1
 httpx==0.28.1

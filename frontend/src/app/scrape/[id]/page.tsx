@@ -23,7 +23,7 @@ export default function JobResultsPage() {
     });
 
     const saveMutation = useMutation({
-        mutationFn: scrapeService.saveJob,
+        mutationFn: (jobId: string) => scrapeService.saveJob(jobId),
         onSuccess: () => {
             toast.success("Job saved to database!");
         },

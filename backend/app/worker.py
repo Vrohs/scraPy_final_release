@@ -72,32 +72,50 @@ async def dispatch_webhook(ctx, job_id: str, user_id: str):
 async def scrape_task(ctx, job_id: str, url: str, mode: str, selectors: dict = None, instruction: str = None, options: dict = None, user_id: str = None):
     print(f"Starting scrape job {job_id} for {url} in {mode} mode")
     
-    # Update status to processing
+    # Create job in DB if it doesn't exist, update status to processing
     async with AsyncSessionLocal() as session:
-        await session.execute(
-            update(Job).where(Job.id == job_id).values(status="processing")
-        )
+        existing_job = await session.get(Job, job_id)
+        if not existing_job:
+            new_job = Job(
+                id=job_id,
+                url=url,
+                mode=mode,
+                status="processing"
+            )
+            session.add(new_job)
+        else:
+            await session.execute(
+                update(Job).where(Job.id == job_id).values(status="processing")
+            )
         await session.commit()
 
     try:
         # 1. Scrape Content
-        if options and options.get("renderJs"):
-            html_content = await scrape_dynamic(url)
-        else:
-            html_content = await scrape_static(url)
-            
-        # 2. Extract Data
-        data = {}
+        # 1. Scrape & Extract
         if mode == "guided" and selectors:
-            # Construct a prompt from selectors
-            prompt = "Extract the following fields:\n"
-            for key, selector in selectors.items():
-                prompt += f"- {key} (CSS: {selector})\n"
-            data = await analyze_page(html_content, prompt)
+            if options and options.get("renderJs"):
+                data = await scrape_dynamic(url, selectors)
+            else:
+                data = await scrape_static(url, selectors)
+        
         elif mode == "smart" and instruction:
+            # For smart mode, we need the raw HTML first
+            if options and options.get("renderJs"):
+                result = await scrape_dynamic(url)
+            else:
+                result = await scrape_static(url)
+            
+            html_content = result.get("html", "")
             data = await analyze_page(html_content, instruction)
+            
         else:
-            # Default: just return title and meta description
+            # Default: just return title and meta description using LLM (or could be simple soup)
+            if options and options.get("renderJs"):
+                result = await scrape_dynamic(url)
+            else:
+                result = await scrape_static(url)
+                
+            html_content = result.get("html", "")
             data = await analyze_page(html_content, "Extract the page title and main summary.")
 
         # 3. Save Results
@@ -110,17 +128,39 @@ async def scrape_task(ctx, job_id: str, url: str, mode: str, selectors: dict = N
             )
             await session.commit()
             
+        # Update Redis so API sees the change immediately
+        await ctx["redis"].set(f"job:{job_id}", json.dumps({
+            "status": "completed",
+            "url": url,
+            "mode": mode,
+            "data": data,
+            "created_at": datetime.utcnow().isoformat() # Approximate
+        }), ex=3600)
+            
         # 4. Dispatch Webhook
         if user_id:
             await ctx["redis"].enqueue_job("dispatch_webhook", job_id, user_id)
 
     except Exception as e:
-        print(f"Job {job_id} failed: {e}")
+        error_msg = str(e)
+        print(f"Job {job_id} failed: {error_msg}")
         async with AsyncSessionLocal() as session:
             await session.execute(
-                update(Job).where(Job.id == job_id).values(status="failed")
+                update(Job).where(Job.id == job_id).values(
+                    status="failed",
+                    error=error_msg
+                )
             )
             await session.commit()
+            
+        # Update Redis with error
+        await ctx["redis"].set(f"job:{job_id}", json.dumps({
+            "status": "failed",
+            "url": url,
+            "mode": mode,
+            "error": error_msg,
+            "created_at": datetime.utcnow().isoformat()
+        }), ex=3600)
 
 async def startup(ctx):
     ctx["redis"] = await create_pool(RedisSettings(host=settings.REDIS_HOST, port=settings.REDIS_PORT))

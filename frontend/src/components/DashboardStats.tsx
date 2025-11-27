@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, History, Zap } from "lucide-react";
 
@@ -24,14 +25,9 @@ export function DashboardStats() {
         const fetchStats = async () => {
             try {
                 const token = await getToken();
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-                const res = await fetch(`${apiUrl}/api/v1/stats`, {
-                    headers: token ? { Authorization: `Bearer ${token}` } : undefined
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setStats(data);
-                }
+                const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+                const res = await api.get('/stats', { headers });
+                setStats(res.data);
             } catch (error) {
                 console.error("Failed to fetch stats:", error);
             } finally {

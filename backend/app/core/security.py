@@ -38,12 +38,16 @@ def verify_token(token: str):
         kid = header.get("kid")
         
         if not kid:
+            print("DEBUG: No KID in header")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token header"
             )
             
         jwks = get_jwks()
+        print(f"DEBUG: Token KID: {kid}")
+        print(f"DEBUG: Available KIDs: {[k.get('kid') for k in jwks.get('keys', [])]}")
+        
         public_key = None
         
         for key in jwks["keys"]:
@@ -53,14 +57,18 @@ def verify_token(token: str):
                 
         if not public_key:
             # Refresh cache and try once more
+            print("DEBUG: KID not found, refreshing cache...")
             jwks_cache.clear()
             jwks = get_jwks()
+            print(f"DEBUG: Refreshed KIDs: {[k.get('kid') for k in jwks.get('keys', [])]}")
+            
             for key in jwks["keys"]:
                 if key["kid"] == kid:
                     public_key = RSAAlgorithm.from_jwk(json.dumps(key))
                     break
             
             if not public_key:
+                print(f"DEBUG: KID {kid} still not found after refresh.")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid token key"
@@ -77,18 +85,19 @@ def verify_token(token: str):
         return payload
         
     except jwt.ExpiredSignatureError:
+        print("DEBUG: Token expired")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token expired"
         )
     except jwt.InvalidTokenError as e:
-        print(f"Invalid token: {e}")
+        print(f"DEBUG: Invalid token error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
         )
     except Exception as e:
-        print(f"Token verification failed: {e}")
+        print(f"DEBUG: Token verification failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials"

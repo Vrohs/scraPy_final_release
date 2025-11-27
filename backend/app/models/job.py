@@ -10,4 +10,5 @@ class Job(Base):
     mode = Column(String)
     status = Column(String)
     data = Column(JSON)
+    error = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
