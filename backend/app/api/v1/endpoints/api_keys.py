@@ -26,12 +26,25 @@ async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
-@router.post("/", response_model=ApiKeyResponse)
+@router.post(
+    "/",
+    response_model=ApiKeyResponse,
+    summary="Create API key",
+    description="Generate a new API key for programmatic access. The full key is only shown once - save it securely!",
+    response_description="New API key with full key value (only shown once)"
+)
 async def create_api_key(
     data: ApiKeyCreate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
+    """
+    Create a new API key for the authenticated user.
+    
+    - **name**: Friendly name to identify this key
+    
+    **IMPORTANT**: The full API key is only returned once. Store it securely!
+    """
     # Generate a secure random key
     # Format: sk_live_<random_32_chars>
     raw_key = f"sk_live_{secrets.token_urlsafe(32)}"
@@ -61,11 +74,22 @@ async def create_api_key(
         "key": raw_key # Return full key only once
     }
 
-@router.get("/", response_model=List[ApiKeyResponse])
+@router.get(
+    "/",
+    response_model=List[ApiKeyResponse],
+    summary="List API keys",
+    description="Get all active API keys for the current user. Only key prefixes are shown for security.",
+    response_description="List of active API keys"
+)
 async def list_api_keys(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
+    """
+    List all active API keys for the authenticated user.
+    
+    Only the key prefix (first 12 characters) is shown for security. Full keys cannot be retrieved after creation.
+    """
     user_id = current_user.get("sub")
     result = await db.execute(
         select(ApiKey)
@@ -85,12 +109,24 @@ async def list_api_keys(
         for k in keys
     ]
 
-@router.delete("/{key_id}")
+@router.delete(
+    "/{key_id}",
+    summary="Revoke API key",
+    description="Deactivate an API key. This action cannot be undone. The key will immediately stop working.",
+    response_description="Key revocation status"
+)
 async def revoke_api_key(
     key_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
+    """
+    Revoke (deactivate) an API key.
+    
+    - **key_id**: The unique identifier of the key to revoke
+    
+    The key will be immediately deactivated and can no longer be used for authentication.
+    """
     user_id = current_user.get("sub")
     result = await db.execute(
         select(ApiKey)

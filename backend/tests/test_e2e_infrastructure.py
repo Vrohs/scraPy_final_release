@@ -1,5 +1,5 @@
 import asyncio
-import requests
+import httpx
 import time
 import json
 from sqlalchemy import create_engine, text
@@ -35,7 +35,8 @@ def verify_infrastructure():
         "mode": "guided",
         "selectors": {"title": "h1"}
     }
-    response = requests.post(f"{API_URL}/scrape", json=payload, headers=headers)
+    with httpx.Client() as client:
+        response = client.post(f"{API_URL}/scrape", json=payload, headers=headers)
     
     if response.status_code != 200:
         print(f"❌ Failed to create job: {response.text}")
@@ -66,22 +67,23 @@ def verify_infrastructure():
     # 4. Poll for Completion
     print("\n4️⃣  Polling for Completion...")
     max_retries = 10
-    for i in range(max_retries):
-        response = requests.get(f"{API_URL}/scrape/{job_id}", headers=headers)
-        status = response.json()["status"]
-        print(f"   Status: {status}")
-        
-        if status == "completed":
-            print("✅ Job Completed!")
-            break
-        elif status == "failed":
-            print(f"❌ Job Failed: {response.json().get('error')}")
+    with httpx.Client() as client:
+        for i in range(max_retries):
+            response = client.get(f"{API_URL}/scrape/{job_id}", headers=headers)
+            status = response.json()["status"]
+            print(f"   Status: {status}")
+            
+            if status == "completed":
+                print("✅ Job Completed!")
+                break
+            elif status == "failed":
+                print(f"❌ Job Failed: {response.json().get('error')}")
+                return
+            
+            time.sleep(2)
+        else:
+            print("❌ Timeout waiting for job completion")
             return
-        
-        time.sleep(2)
-    else:
-        print("❌ Timeout waiting for job completion")
-        return
 
     # 5. Verify Result in Database
     print("\n5️⃣  Verifying Result in Database...")

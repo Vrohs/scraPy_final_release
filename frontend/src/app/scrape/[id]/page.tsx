@@ -8,14 +8,19 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useAuth } from '@clerk/nextjs';
 
 export default function JobResultsPage() {
     const params = useParams();
     const id = params.id as string;
+    const { getToken } = useAuth();
 
     const { data: job, isLoading, error } = useQuery({
         queryKey: ['job', id],
-        queryFn: () => scrapeService.getJob(id),
+        queryFn: async () => {
+            const token = await getToken();
+            return scrapeService.getJob(id, token || undefined);
+        },
         refetchInterval: (query) => {
             const status = query.state.data?.status;
             return status === 'completed' || status === 'failed' ? false : 2000;
@@ -23,7 +28,10 @@ export default function JobResultsPage() {
     });
 
     const saveMutation = useMutation({
-        mutationFn: (jobId: string) => scrapeService.saveJob(jobId),
+        mutationFn: async (jobId: string) => {
+            const token = await getToken();
+            return scrapeService.saveJob(jobId, token || undefined);
+        },
         onSuccess: () => {
             toast.success("Job saved to database!");
         },

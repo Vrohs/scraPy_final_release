@@ -1,4 +1,4 @@
-import requests
+import httpx
 import concurrent.futures
 import time
 
@@ -9,21 +9,22 @@ headers = {"X-API-Key": TEST_API_KEY}
 def submit_job(job_num):
     """Submit a single scraping job."""
     try:
-        response = requests.post(
-            f"{API_URL}/scrape",
-            json={
-                "url": f"https://example.com",
-                "mode": "guided",
-                "selectors": {"title": "h1"}
-            },
-            headers=headers,
-            timeout=10
-        )
-        if response.status_code == 200:
-            job_id = response.json()['job_id']
-            return f"✅ Job {job_num}: {job_id}"
-        else:
-            return f"❌ Job {job_num}: {response.status_code}"
+        with httpx.Client() as client:
+            response = client.post(
+                f"{API_URL}/scrape",
+                json={
+                    "url": f"https://example.com",
+                    "mode": "guided",
+                    "selectors": {"title": "h1"}
+                },
+                headers=headers,
+                timeout=10
+            )
+            if response.status_code == 200:
+                job_id = response.json()['job_id']
+                return f"✅ Job {job_num}: {job_id}"
+            else:
+                return f"❌ Job {job_num}: {response.status_code}"
     except Exception as e:
         return f"❌ Job {job_num}: {str(e)}"
 

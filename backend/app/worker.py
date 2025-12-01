@@ -13,6 +13,7 @@ from app.models.job import Job
 from app.models.webhook import Webhook
 from sqlalchemy import select, update
 from datetime import datetime
+from app.core.logging import logger, log_job_completed, log_job_failed, log_webhook_dispatched
 
 async def dispatch_webhook(ctx, job_id: str, user_id: str):
     """
@@ -66,11 +67,14 @@ async def dispatch_webhook(ctx, job_id: str, user_id: str):
                             },
                             timeout=10.0
                         )
+                        log_webhook_dispatched(job_id, webhook.url, True)
                     except Exception as e:
-                        print(f"Failed to send webhook to {webhook.url}: {e}")
+                        logger.error(f"Failed to send webhook to {webhook.url}: {e}")
+                        log_webhook_dispatched(job_id, webhook.url, False)
 
 async def scrape_task(ctx, job_id: str, url: str, mode: str, selectors: dict = None, instruction: str = None, options: dict = None, user_id: str = None):
-    print(f"Starting scrape job {job_id} for {url} in {mode} mode")
+    logger.info(f"Starting scrape job {job_id} for {url} in {mode} mode")
+    start_time = datetime.utcnow()
     
     # Create job in DB if it doesn't exist, update status to processing
     async with AsyncSessionLocal() as session:
@@ -136,6 +140,9 @@ async def scrape_task(ctx, job_id: str, url: str, mode: str, selectors: dict = N
             "data": data,
             "created_at": datetime.utcnow().isoformat() # Approximate
         }), ex=3600)
+        
+        duration = (datetime.utcnow() - start_time).total_seconds()
+        log_job_completed(job_id, duration)
             
         # 4. Dispatch Webhook
         if user_id:
@@ -143,7 +150,8 @@ async def scrape_task(ctx, job_id: str, url: str, mode: str, selectors: dict = N
 
     except Exception as e:
         error_msg = str(e)
-        print(f"Job {job_id} failed: {error_msg}")
+        logger.error(f"Job {job_id} failed: {error_msg}")
+        log_job_failed(job_id, error_msg)
         async with AsyncSessionLocal() as session:
             await session.execute(
                 update(Job).where(Job.id == job_id).values(
