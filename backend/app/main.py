@@ -195,8 +195,17 @@ async def debug_config():
             "frontend_url": settings.FRONTEND_URL,
         },
         "redis_status": redis_status,
-        "worker_check": "If redis is connected, worker should be able to pick up jobs if running in same container."
+        "worker_check": "If redis is connected, worker should be able to pick up jobs if running in same container.",
+        "processes": get_running_processes()
     }
+
+def get_running_processes():
+    try:
+        import subprocess
+        result = subprocess.run(["ps", "aux"], capture_output=True, text=True)
+        return result.stdout.split("\n")
+    except Exception as e:
+        return [f"Error listing processes: {str(e)}"]
 
 @app.get("/")
 def root():
