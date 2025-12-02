@@ -85,16 +85,24 @@ async def create_scrape_job(
     job_id = str(uuid.uuid4())
     
     # Enqueue job to Arq
-    await req.app.state.redis.enqueue_job(
-        "scrape_task",
-        job_id=job_id,
-        url=request.url,
-        mode=request.mode,
-        selectors=request.selectors,
-        instruction=request.instruction,
-        options=request.options,
-        user_id=current_user["sub"] # Pass user_id for webhooks
-    )
+    from app.core.logging import logger
+    logger.info(f"Enqueueing job {job_id} for URL {request.url} in {request.mode} mode")
+    
+    try:
+        await req.app.state.redis.enqueue_job(
+            "scrape_task",
+            job_id=job_id,
+            url=request.url,
+            mode=request.mode,
+            selectors=request.selectors,
+            instruction=request.instruction,
+            options=request.options,
+            user_id=current_user["sub"] # Pass user_id for webhooks
+        )
+        logger.info(f"Job {job_id} enqueued successfully")
+    except Exception as e:
+        logger.error(f"Failed to enqueue job {job_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to queue job: {str(e)}")
     
     # Set initial status in Redis
     await req.app.state.redis.set(f"job:{job_id}", json.dumps({
