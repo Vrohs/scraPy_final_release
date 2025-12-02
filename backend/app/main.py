@@ -184,12 +184,21 @@ def get_running_processes():
 
 @app.get("/debug/logs")
 async def debug_logs():
-    """Read the worker logs"""
+    """Read the worker logs and list files"""
     try:
+        cwd = os.getcwd()
+        files = os.listdir(cwd)
+        
+        logs = "Log file not found"
         if os.path.exists("worker.log"):
             with open("worker.log", "r") as f:
-                return {"logs": f.read()}
-        return {"logs": "Log file not found"}
+                logs = f.read()
+                
+        return {
+            "cwd": cwd,
+            "files": files,
+            "logs": logs
+        }
     except Exception as e:
         return {"error": str(e)}
 
