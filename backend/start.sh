@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Install Playwright browsers (required for Render Native environment)
+echo "Installing Playwright browsers..."
+playwright install
+
 # Start the ARQ worker in the background and log to file
 echo "Starting ARQ worker..."
 arq app.worker.WorkerSettings > worker.log 2>&1 &
