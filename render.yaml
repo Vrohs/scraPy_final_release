@@ -1,0 +1,29 @@
+services:
+  # FastAPI Web Service
+  - type: web
+    name: scrapy-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: PORT
+        generateValue: true
+    healthCheckPath: /health
+    
+  # ARQ Worker Service  
+  - type: worker
+    name: scrapy-worker
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerCommand: arq app.worker.WorkerSettings
+
+databases:
+  - name: scrapy-postgres
+    databaseName: scrapy
+    user: scrapy
+    
+  - name: scrapy-redis
+    ipAllowList: []
