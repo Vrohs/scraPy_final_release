@@ -74,8 +74,12 @@ export default function ScrapeForm() {
     });
 
     function onSubmit(data: ScrapeFormData) {
+        console.log("🚀 Form submitting with data:", data);
         mutation.mutate(data);
     }
+
+    // Debug form errors
+    console.log("❌ Form Errors:", form.formState.errors);
 
     return (
         <Card className="w-full max-w-2xl mx-auto">
@@ -87,7 +91,7 @@ export default function ScrapeForm() {
             </CardHeader>
             <CardContent>
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <form onSubmit={form.handleSubmit(onSubmit, (errors) => console.error("Form validation failed:", errors))} className="space-y-6">
                         <FormField
                             control={form.control}
                             name="url"
