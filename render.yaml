@@ -10,6 +10,21 @@ services:
         value: "3.12"
       - key: PORT
         generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: scrapy-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: scrapy-redis
+          property: connectionString
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CLERK_ISSUER_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
     healthCheckPath: /health
     
   # ARQ Worker Service  
@@ -19,6 +34,18 @@ services:
     rootDir: backend
     dockerfilePath: ./Dockerfile
     dockerCommand: arq app.worker.WorkerSettings
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: scrapy-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: scrapy-redis
+          property: connectionString
+      - key: GEMINI_API_KEY
+        sync: false
 
 databases:
   - name: scrapy-postgres
