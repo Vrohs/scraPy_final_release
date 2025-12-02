@@ -13,8 +13,8 @@ export const scrapeFormSchema = z.object({
     .optional(),
   instruction: z.string().optional(),
   options: z.object({
-    useProxy: z.boolean().default(false),
-    renderJs: z.boolean().default(false),
+    useProxy: z.boolean(),
+    renderJs: z.boolean(),
   }),
 });
 
