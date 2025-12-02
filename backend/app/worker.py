@@ -178,9 +178,23 @@ async def shutdown(ctx):
 
 class WorkerSettings:
     functions = [scrape_task, dispatch_webhook]
-    redis_settings = RedisSettings(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT
-    )
+    
+    # Parse Redis URL for production support
+    from urllib.parse import urlparse
+    parsed = urlparse(settings.redis_connection_url)
+    
+    if parsed.hostname:
+        redis_settings = RedisSettings(
+            host=parsed.hostname,
+            port=parsed.port or 6379,
+            password=parsed.password,
+            ssl=parsed.scheme == "rediss"
+        )
+    else:
+        redis_settings = RedisSettings(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT
+        )
+        
     on_startup = startup
     on_shutdown = shutdown
