@@ -1,14 +1,18 @@
 #!/bin/bash
 
-# Install Playwright browsers (required for Render Native environment)
-echo "Installing Playwright browsers..."
-playwright install
-
-# Start the ARQ worker in the background and log to file
-echo "Starting ARQ worker..."
-arq app.worker.WorkerSettings > worker.log 2>&1 &
-
-# Start the FastAPI application in the foreground
+# Start FastAPI server in background immediately to satisfy Render timeout
 echo "Starting FastAPI server..."
-# Use exec to let uvicorn take over the PID 1 (or the shell's PID) for signal handling
-exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} &
+API_PID=$!
+
+# Install Playwright & Start Worker in background
+(
+  echo "Installing Playwright browsers (Chromium only)..."
+  playwright install chromium
+  
+  echo "Starting ARQ worker..."
+  arq app.worker.WorkerSettings > worker.log 2>&1
+) &
+
+# Wait for API to finish (keep container alive)
+wait $API_PID
