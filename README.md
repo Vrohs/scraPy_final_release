@@ -161,7 +161,7 @@ graph TB
 
     %% Results Flow
     arq_worker -->|Cache Results| redis
-    arq_worker -.Webhook.->|Notify| api_consumer
+    arq_worker -.->|Webhook| api_consumer
 
     %% Styling
     classDef clientStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
