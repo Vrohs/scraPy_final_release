@@ -88,78 +88,199 @@
 
 ## Architecture
 
-### System Overview
+### System Design - Complete Overview
 
 ```mermaid
-graph TB
-    subgraph "Client Layer"
-        UI[Next.js Frontend]
-        API_CLIENT[API Clients]
-    end
+architecture-beta
+    group client(cloud)[Client Layer]
+    group frontend(cloud)[Frontend - Vercel]
+    group backend(cloud)[Backend - Render]
+    group processing(cloud)[Processing Layer]
+    group data(cloud)[Data Layer]
+    group external(cloud)[External Services]
 
-    subgraph "API Gateway"
-        FASTAPI[FastAPI Server]
-        AUTH[Clerk Auth]
-    end
+    service browser(internet)[Web Browser] in client
+    service api_consumer(internet)[API Consumer] in client
+    
+    service nextjs(server)[Next.js App] in frontend
+    service clerk_frontend(disk)[Clerk SDK] in frontend
+    
+    service fastapi(server)[FastAPI Server] in backend
+    service auth_middleware(disk)[Auth Middleware] in backend
+    service rate_limiter(disk)[Rate Limiter] in backend
+    service ssrf_guard(disk)[SSRF Protection] in backend
+    
+    service arq_worker(server)[ARQ Worker] in processing
+    service scraper_engine(disk)[Scraper Engine] in processing
+    service playwright(disk)[Playwright Browser] in processing
+    service llm_service(disk)[LLM Service] in processing
+    
+    service postgres(database)[PostgreSQL] in data
+    service redis(database)[Redis Cache] in data
+    
+    service clerk_auth(internet)[Clerk Auth] in external
+    service gemini_ai(internet)[Google Gemini] in external
+    service target_sites(internet)[Target Websites] in external
 
-    subgraph "Processing Layer"
-        WORKER[ARQ Worker]
-        SCRAPER[Scraper Service]
-        LLM[Gemini LLM]
-    end
-
-    subgraph "Data Layer"
-        POSTGRES[(PostgreSQL)]
-        REDIS[(Redis)]
-    end
-
-    subgraph "External"
-        WEBSITES[Target Websites]
-    end
-
-    UI --> FASTAPI
-    API_CLIENT --> FASTAPI
-    FASTAPI --> AUTH
-    FASTAPI --> REDIS
-    FASTAPI --> POSTGRES
-    WORKER --> REDIS
-    WORKER --> POSTGRES
-    WORKER --> SCRAPER
-    SCRAPER --> WEBSITES
-    SCRAPER --> LLM
-    WORKER -.Webhook.-> API_CLIENT
+    browser:R -- L:nextjs
+    api_consumer:R -- L:fastapi
+    nextjs:R -- L:clerk_frontend
+    clerk_frontend:R -- L:clerk_auth
+    nextjs:B -- T:fastapi
+    
+    fastapi:R -- L:auth_middleware
+    auth_middleware:R -- L:clerk_auth
+    fastapi:B -- T:rate_limiter
+    rate_limiter:B -- T:redis
+    fastapi:B -- T:ssrf_guard
+    
+    fastapi:B -- T:postgres
+    fastapi:R -- L:redis
+    
+    redis:B -- T:arq_worker
+    arq_worker:R -- L:postgres
+    arq_worker:B -- T:scraper_engine
+    
+    scraper_engine:R -- L:playwright
+    scraper_engine:B -- T:llm_service
+    llm_service:R -- L:gemini_ai
+    playwright:B -- T:target_sites
+    
+    arq_worker:T -- B:nextjs
 ```
 
-### Data Flow - Scraping Job
+### Detailed Architecture Breakdown
+
+#### **1. Client Layer**
+- **Web Browser**: End-user interface for interactive scraping
+- **API Consumer**: External applications integrating via REST API
+
+#### **2. Frontend Layer (Vercel)**
+- **Next.js App**: React-based UI with server-side rendering
+  - App Router for routing
+  - TanStack Query for data fetching
+  - Zustand for state management
+- **Clerk SDK**: Client-side authentication handling
+
+#### **3. Backend Layer (Render)**
+- **FastAPI Server**: High-performance async API server
+  - RESTful endpoints (`/scrape`, `/history`, `/api-keys`, `/webhooks`)
+  - Auto-generated OpenAPI documentation
+  - CORS middleware for cross-origin requests
+- **Auth Middleware**: JWT token validation via Clerk
+- **Rate Limiter**: Redis-backed request throttling per API key
+- **SSRF Protection**: Blocks private IPs and localhost requests
+
+#### **4. Processing Layer (Render)**
+- **ARQ Worker**: Async task queue processor
+  - Handles background scraping jobs
+  - Job status tracking and updates
+  - Webhook dispatch on completion
+- **Scraper Engine**: Core scraping logic
+  - Guided mode: CSS selector extraction
+  - Smart mode: AI-powered extraction
+  - HTML parsing with BeautifulSoup4
+- **Playwright Browser**: Headless browser for JavaScript rendering
+  - Chromium engine
+  - Handles dynamic content
+  - Screenshot capabilities
+- **LLM Service**: AI integration layer
+  - Natural language instruction parsing
+  - Intelligent data extraction
+  - Context-aware field mapping
+
+#### **5. Data Layer (Render)**
+- **PostgreSQL**: Primary persistent storage
+  - User data and API keys
+  - Job history and results
+  - Webhook configurations
+  - ACID compliance
+- **Redis**: In-memory cache
+  - Job queue (ARQ)
+  - Rate limit counters
+  - Session storage
+  - Result caching (1-hour TTL)
+
+#### **6. External Services**
+- **Clerk Auth**: Authentication and user management
+- **Google Gemini**: AI model for smart scraping
+- **Target Websites**: Scraped content sources
+
+### Request Flow - Complete Lifecycle
 
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant API
+    actor User
+    participant Browser
+    participant NextJS as Next.js<br/>(Vercel)
+    participant Clerk as Clerk Auth
+    participant FastAPI as FastAPI<br/>(Render)
     participant Redis
-    participant Worker
+    participant ARQ as ARQ Worker<br/>(Render)
     participant Scraper
-    participant LLM
-    participant DB
+    participant LLM as Gemini AI
+    participant Website as Target Site
+    participant DB as PostgreSQL
 
-    Client->>API: POST /scrape
-    API->>Redis: Enqueue job
-    API->>Redis: Set initial status
-    API-->>Client: job_id
+    User->>Browser: Navigate to /scrape
+    Browser->>NextJS: GET /scrape
+    NextJS->>Clerk: Verify session
+    Clerk-->>NextJS: Session valid
+    NextJS-->>Browser: Render form
 
-    Worker->>Redis: Dequeue job
-    Worker->>DB: Update status: processing
-    Worker->>Scraper: Fetch content
-    Scraper->>LLM: Analyze (if smart mode)
-    LLM-->>Scraper: Extracted data
-    Scraper-->>Worker: Results
-    Worker->>DB: Save results
-    Worker->>Redis: Cache results
+    User->>Browser: Submit scrape request
+    Browser->>NextJS: POST form data
+    NextJS->>Clerk: Get auth token
+    Clerk-->>NextJS: JWT token
     
-    Client->>API: GET /scrape/{id}
-    API->>Redis: Get cached job
-    API-->>Client: Job status + data
-```
+    NextJS->>FastAPI: POST /api/v1/scrape<br/>(with JWT)
+    FastAPI->>Clerk: Validate JWT
+    Clerk-->>FastAPI: Token valid
+    
+    FastAPI->>Redis: Check rate limit
+    Redis-->>FastAPI: Limit OK
+    
+    FastAPI->>Redis: Enqueue job (ARQ)
+    FastAPI->>DB: Create job record<br/>(status: pending)
+    FastAPI-->>NextJS: {"job_id": "abc-123"}
+    NextJS-->>Browser: Redirect to /scrape/abc-123
+    
+    Browser->>NextJS: GET /scrape/abc-123
+    NextJS->>FastAPI: GET /api/v1/scrape/abc-123
+    FastAPI->>Redis: Get job status
+    Redis-->>FastAPI: Status: pending
+    FastAPI-->>NextJS: Job details
+    NextJS-->>Browser: Show "Processing..."
+    
+    Note over Redis,ARQ: Background Processing
+    ARQ->>Redis: Dequeue job
+    ARQ->>DB: Update status: processing
+    
+    alt Guided Mode
+        ARQ->>Scraper: Scrape with selectors
+        Scraper->>Website: HTTP GET
+        Website-->>Scraper: HTML content
+        Scraper->>Scraper: Extract via CSS
+    else Smart Mode
+        ARQ->>Scraper: Scrape with instruction
+        Scraper->>Website: HTTP GET (or Playwright)
+        Website-->>Scraper: HTML content
+        Scraper->>LLM: Analyze content
+        LLM-->>Scraper: Extracted data
+    end
+    
+    Scraper-->>ARQ: Results
+    ARQ->>DB: Save results<br/>(status: completed)
+    ARQ->>Redis: Cache results (1h TTL)
+    
+    Note over Browser,NextJS: Polling
+    Browser->>NextJS: GET /scrape/abc-123 (poll)
+    NextJS->>FastAPI: GET /api/v1/scrape/abc-123
+    FastAPI->>Redis: Get cached result
+    Redis-->>FastAPI: Job data
+    FastAPI-->>NextJS: Complete job
+    NextJS-->>Browser: Show results ✅
+
 
 ### Tech Stack
 
@@ -757,7 +878,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 <div align="center">
 
-**Made with ❤️ by [Advait](https://github.com/Vrohs)**
+**Made with ❤️ by [vrohs](https://github.com/Vrohs)**
 
 ⭐ Star this repo if you find it useful!
 
