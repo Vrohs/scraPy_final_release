@@ -90,63 +90,93 @@
 
 ### System Design - Complete Overview
 
+> **Note:** For the interactive architecture-beta diagram, visit [Mermaid Live Editor](https://mermaid.live/) and paste the code from `architecture_diagram.md`
+
 ```mermaid
-architecture-beta
-    group client(cloud)[Client Layer]
-    group frontend(cloud)[Frontend - Vercel]
-    group backend(cloud)[Backend - Render]
-    group processing(cloud)[Processing Layer]
-    group data(cloud)[Data Layer]
-    group external(cloud)[External Services]
+graph TB
+    subgraph client[" CLIENT LAYER "]
+        browser[🌐 Web Browser]
+        api_consumer[📡 API Consumer]
+    end
 
-    service browser(internet)[Web Browser] in client
-    service api_consumer(internet)[API Consumer] in client
-    
-    service nextjs(server)[Next.js App] in frontend
-    service clerk_frontend(disk)[Clerk SDK] in frontend
-    
-    service fastapi(server)[FastAPI Server] in backend
-    service auth_middleware(disk)[Auth Middleware] in backend
-    service rate_limiter(disk)[Rate Limiter] in backend
-    service ssrf_guard(disk)[SSRF Protection] in backend
-    
-    service arq_worker(server)[ARQ Worker] in processing
-    service scraper_engine(disk)[Scraper Engine] in processing
-    service playwright(disk)[Playwright Browser] in processing
-    service llm_service(disk)[LLM Service] in processing
-    
-    service postgres(database)[PostgreSQL] in data
-    service redis(database)[Redis Cache] in data
-    
-    service clerk_auth(internet)[Clerk Auth] in external
-    service gemini_ai(internet)[Google Gemini] in external
-    service target_sites(internet)[Target Websites] in external
+    subgraph frontend[" FRONTEND - VERCEL "]
+        nextjs[⚡ Next.js App<br/>React 19 + App Router]
+        clerk_frontend[🔐 Clerk SDK]
+    end
 
-    browser:R -- L:nextjs
-    api_consumer:R -- L:fastapi
-    nextjs:R -- L:clerk_frontend
-    clerk_frontend:R -- L:clerk_auth
-    nextjs:B -- T:fastapi
+    subgraph backend[" BACKEND - RENDER "]
+        fastapi[🚀 FastAPI Server<br/>Port 8000]
+        auth_middleware[🔒 Auth Middleware<br/>JWT Validation]
+        rate_limiter[⏱️ Rate Limiter<br/>Redis-backed]
+        ssrf_guard[🛡️ SSRF Protection<br/>IP Filtering]
+    end
+
+    subgraph processing[" PROCESSING LAYER - RENDER "]
+        arq_worker[⚙️ ARQ Worker<br/>Background Jobs]
+        scraper_engine[🕷️ Scraper Engine<br/>Guided + Smart Mode]
+        playwright[🎭 Playwright Browser<br/>Chromium]
+        llm_service[🤖 LLM Service<br/>Gemini Integration]
+    end
+
+    subgraph data[" DATA LAYER - RENDER "]
+        postgres[(🗄️ PostgreSQL<br/>Job History + Users)]
+        redis[(⚡ Redis<br/>Queue + Cache)]
+    end
+
+    subgraph external[" EXTERNAL SERVICES "]
+        clerk_auth[🔐 Clerk Auth<br/>Authentication]
+        gemini_ai[🧠 Google Gemini<br/>AI Model]
+        target_sites[🌍 Target Websites<br/>Scraping Sources]
+    end
+
+    %% Client to Frontend
+    browser -->|HTTPS| nextjs
+    api_consumer -->|REST API| fastapi
+
+    %% Frontend Flow
+    nextjs -->|Auth Check| clerk_frontend
+    clerk_frontend -->|Verify Token| clerk_auth
+    nextjs -->|API Calls| fastapi
+
+    %% Backend Security Layers
+    fastapi -->|Validate JWT| auth_middleware
+    auth_middleware -->|Verify| clerk_auth
+    fastapi -->|Check Limits| rate_limiter
+    rate_limiter -->|Counter| redis
+    fastapi -->|Validate URL| ssrf_guard
+
+    %% Backend to Data
+    fastapi -->|Save Jobs| postgres
+    fastapi -->|Enqueue| redis
+
+    %% Processing Flow
+    redis -->|Dequeue| arq_worker
+    arq_worker -->|Update Status| postgres
+    arq_worker -->|Execute| scraper_engine
     
-    fastapi:R -- L:auth_middleware
-    auth_middleware:R -- L:clerk_auth
-    fastapi:B -- T:rate_limiter
-    rate_limiter:B -- T:redis
-    fastapi:B -- T:ssrf_guard
-    
-    fastapi:B -- T:postgres
-    fastapi:R -- L:redis
-    
-    redis:B -- T:arq_worker
-    arq_worker:R -- L:postgres
-    arq_worker:B -- T:scraper_engine
-    
-    scraper_engine:R -- L:playwright
-    scraper_engine:B -- T:llm_service
-    llm_service:R -- L:gemini_ai
-    playwright:B -- T:target_sites
-    
-    arq_worker:T -- B:nextjs
+    scraper_engine -->|JS Pages| playwright
+    scraper_engine -->|AI Extract| llm_service
+    llm_service -->|API Call| gemini_ai
+    playwright -->|HTTP GET| target_sites
+
+    %% Results Flow
+    arq_worker -->|Cache Results| redis
+    arq_worker -.Webhook.->|Notify| api_consumer
+
+    %% Styling
+    classDef clientStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef frontendStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef backendStyle fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef processingStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef dataStyle fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef externalStyle fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+
+    class browser,api_consumer clientStyle
+    class nextjs,clerk_frontend frontendStyle
+    class fastapi,auth_middleware,rate_limiter,ssrf_guard backendStyle
+    class arq_worker,scraper_engine,playwright,llm_service processingStyle
+    class postgres,redis dataStyle
+    class clerk_auth,gemini_ai,target_sites externalStyle
 ```
 
 ### Detailed Architecture Breakdown
