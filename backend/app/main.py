@@ -135,40 +135,14 @@ async def shutdown_event():
     await app.state.redis.close()
     logger.info("scraPy API server shut down complete")
 
-# Set all CORS enabled origins - supports both local dev and production
+# Set all CORS enabled origins
 # In production, FRONTEND_URL should be your main Vercel domain
-# We'll also allow all Vercel preview deployments (*.vercel.app)
-import re
-
-def is_allowed_origin(origin: str) -> bool:
-    """Check if origin is allowed"""
-    if not origin:
-        return False
-    
-    # Allow configured frontend URL
-    if origin == settings.FRONTEND_URL:
-        return True
-    
-    # Allow localhost for development
-    if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
-        return True
-    
-    # Allow all Vercel deployments (*.vercel.app)
-    if re.match(r"https://.*\.vercel\.app$", origin):
-        return True
-    
-    return False
-
-from starlette.middleware.cors import CORSMiddleware as BaseCORSMiddleware
-
-class CustomCORSMiddleware(BaseCORSMiddleware):
-    def is_allowed_origin(self, origin: str) -> bool:
-        return is_allowed_origin(origin)
+# We'll also allow all Vercel preview deployments (*.vercel.app) via regex
 
 app.add_middleware(
-    CustomCORSMiddleware,
-    allow_origins=["*"],  # We handle validation in is_allowed_origin
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    CORSMiddleware,
+    allow_origins=[settings.FRONTEND_URL, "http://localhost:3000"], # Explicitly allow configured URL and localhost
+    allow_origin_regex=r"https://.*\.vercel\.app", # Allow all Vercel subdomains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
