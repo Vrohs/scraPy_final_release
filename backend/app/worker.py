@@ -171,7 +171,8 @@ async def scrape_task(ctx, job_id: str, url: str, mode: str, selectors: dict = N
         }), ex=3600)
 
 async def startup(ctx):
-    ctx["redis"] = await create_pool(RedisSettings(host=settings.REDIS_HOST, port=settings.REDIS_PORT))
+    # Use the settings we already parsed in WorkerSettings
+    ctx["redis"] = await create_pool(WorkerSettings.redis_settings)
 
 async def shutdown(ctx):
     await ctx["redis"].close()
