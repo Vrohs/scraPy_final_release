@@ -174,6 +174,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/debug/config")
+async def debug_config():
+    """Debug endpoint to check environment configuration"""
+    redis_status = "unknown"
+    try:
+        if hasattr(app.state, "redis"):
+            await app.state.redis.ping()
+            redis_status = "connected"
+        else:
+            redis_status = "not_initialized"
+    except Exception as e:
+        redis_status = f"error: {str(e)}"
+
+    return {
+        "env_vars": {
+            "redis_url_set": bool(settings.REDIS_URL),
+            "gemini_key_set": bool(settings.GEMINI_API_KEY),
+            "clerk_url_set": bool(settings.CLERK_ISSUER_URL),
+            "frontend_url": settings.FRONTEND_URL,
+        },
+        "redis_status": redis_status,
+        "worker_check": "If redis is connected, worker should be able to pick up jobs if running in same container."
+    }
+
 @app.get("/")
 def root():
     return {"message": "Welcome to scraPy API"}
