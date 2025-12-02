@@ -6,6 +6,7 @@ from app.api.v1.api import api_router
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi import HTTPException, status
 from datetime import datetime
+import os
 
 # Middleware to limit request body size
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
@@ -180,6 +181,17 @@ def get_running_processes():
         return result.stdout.split("\n")
     except Exception as e:
         return [f"Error listing processes: {str(e)}"]
+
+@app.get("/debug/logs")
+async def debug_logs():
+    """Read the worker logs"""
+    try:
+        if os.path.exists("worker.log"):
+            with open("worker.log", "r") as f:
+                return {"logs": f.read()}
+        return {"logs": "Log file not found"}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/")
 def root():

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Start the ARQ worker in the background
+# Start the ARQ worker in the background and log to file
 echo "Starting ARQ worker..."
-arq app.worker.WorkerSettings &
+arq app.worker.WorkerSettings > worker.log 2>&1 &
 
 # Start the FastAPI application in the foreground
 echo "Starting FastAPI server..."
